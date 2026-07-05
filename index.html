@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Defense | Community Shield</title>
+    <!-- Tailwind CSS para el diseño profesional -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen font-sans">
+
+    <div class="max-w-md mx-auto p-6 mt-10 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
+        <h1 class="text-2xl font-bold text-emerald-400 mb-2">🛡️ Neural Defense</h1>
+        <p class="text-sm text-slate-400 mb-6">Decodificador de Engaño Cognitivo</p>
+
+        <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">Pegá el mensaje sospechoso aquí:</label>
+            <textarea id="textoSospechoso" rows="5" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none text-white" placeholder="Ej: Tu cuenta ha sido bloqueada. Entra a este link URGENTE..."></textarea>
+        </div>
+
+        <button onclick="analizarTexto()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
+            Analizar Amenaza
+        </button>
+
+        <!-- Contenedor de Resultados -->
+        <div id="resultado" class="mt-6 hidden">
+            <h3 class="text-lg font-bold mb-2">Diagnóstico:</h3>
+            <div id="nivelAlerta" class="p-3 rounded-lg font-semibold mb-2"></div>
+            <ul id="detallesAlerta" class="list-disc pl-5 text-sm space-y-1 text-slate-300 mb-4"></ul>
+            
+            <!-- Botón para reportar a tu Firebase -->
+            <button id="btnReportar" onclick="enviarReporte()" class="hidden w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 shadow-lg shadow-red-500/50">
+                🚨 Reportar a la Comunidad
+            </button>
+        </div>
+    </div>
+
+    <!-- Módulo de Firebase y Lógica del Motor -->
+    <script type="module">
+        // 1. Importar librerías de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // 2. TUS CREDENCIALES EXACTAS DE FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEqDY_baLIgQK_DyAY9PhkYEMH-MZ20cY",
+            authDomain: "neural-defense-facac.firebaseapp.com",
+            projectId: "neural-defense-facac",
+            storageBucket: "neural-defense-facac.firebasestorage.app",
+            messagingSenderId: "343870621434",
+            appId: "1:343870621434:web:fa2febe076bb006282eb43"
+        };
+
+        // 3. Iniciar la conexión con la nube
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Variables para guardar el texto analizado
+        let reporteActual = { texto: "", riesgo: "", banderas: [] };
+
+        // Función del motor heurístico (Analizador)
+        window.analizarTexto = function() {
+            const texto = document.getElementById('textoSospechoso').value.toLowerCase();
+            const resultadoDiv = document.getElementById('resultado');
+            const nivelAlerta = document.getElementById('nivelAlerta');
+            const detalles = document.getElementById('detallesAlerta');
+            const btnReportar = document.getElementById('btnReportar');
+            
+            detalles.innerHTML = '';
+            btnReportar.classList.add('hidden'); // Ocultar botón por defecto
+            let puntuacionRiesgo = 0;
+            let banderasRojas = [];
+
+            if (texto.trim() === '') {
+                alert("Por favor, ingresá un texto para analizar.");
+                return;
+            }
+
+            // Diccionario de patrones
+            const patrones = {
+                urgencia: ["urgente", "inmediato", "bloqueada", "suspendida", "24 horas", "vencerá"],
+                gancho: ["ganaste", "premio", "sorteo", "felicidades"],
+                accion: ["haz clic", "ingresa aquí", "verifica tu identidad", "actualiza tus datos"],
+                financiero: ["banco", "tarjeta", "transferencia", "cvv", "contraseña"]
+            };
+
+            // Detectar amenazas
+            patrones.urgencia.forEach(p => { if (texto.includes(p)) { puntuacionRiesgo += 2; banderasRojas.push("Sentido de urgencia falsa detectado."); } });
+            patrones.gancho.forEach(p => { if (texto.includes(p)) { puntuacionRiesgo += 3; banderasRojas.push("Promesa de premio inusual."); } });
+            patrones.accion.forEach(p => { if (texto.includes(p)) { puntuacionRiesgo += 2; banderasRojas.push("Exige interacción directa."); } });
+            patrones.financiero.forEach(p => { if (texto.includes(p)) { puntuacionRiesgo += 2; banderasRojas.push("Pide datos financieros o credenciales."); } });
+            if (texto.includes("http") || texto.includes("www.")) { puntuacionRiesgo += 3; banderasRojas.push("Contiene un enlace. Cuidado con el Phishing."); }
+
+            resultadoDiv.classList.remove('hidden');
+            
+            if (puntuacionRiesgo === 0) {
+                nivelAlerta.className = "p-3 rounded-lg font-semibold mb-2 bg-emerald-900 text-emerald-300 border border-emerald-700";
+                nivelAlerta.innerText = "✅ Riesgo Bajo: No se detectaron patrones obvios.";
+                reporteActual.riesgo = "Bajo";
+            } else if (puntuacionRiesgo > 0 && puntuacionRiesgo <= 4) {
+                nivelAlerta.className = "p-3 rounded-lg font-semibold mb-2 bg-yellow-900 text-yellow-300 border border-yellow-700";
+                nivelAlerta.innerText = "⚠️ Riesgo Medio: Contiene elementos sospechosos.";
+                reporteActual.riesgo = "Medio";
+                btnReportar.classList.remove('hidden'); 
+            } else {
+                nivelAlerta.className = "p-3 rounded-lg font-semibold mb-2 bg-red-900 text-red-300 border border-red-700";
+                nivelAlerta.innerText = "🚨 ALTO RIESGO: Patrón claro de estafa.";
+                reporteActual.riesgo = "Alto";
+                btnReportar.classList.remove('hidden'); 
+            }
+
+            banderasRojas = [...new Set(banderasRojas)];
+            reporteActual.texto = texto;
+            reporteActual.banderas = banderasRojas;
+
+            banderasRojas.forEach(b => {
+                const li = document.createElement('li'); li.innerText = b; detalles.appendChild(li);
+            });
+        }
+
+        // Función para enviar a tu base de datos Firebase
+        window.enviarReporte = async function() {
+            const btn = document.getElementById('btnReportar');
+            try {
+                btn.innerText = "Enviando...";
+                btn.disabled = true;
+
+                // Guardar en Firebase en la colección "reportes_comunidad"
+                const docRef = await addDoc(collection(db, "reportes_comunidad"), {
+                    mensaje_original: reporteActual.texto,
+                    nivel_riesgo: reporteActual.riesgo,
+                    detalles: reporteActual.banderas,
+                    fecha: new Date().toISOString()
+                });
+
+                alert("¡Éxito! El reporte se guardó en tu base de datos Neural Defense.");
+                btn.innerText = "Reporte Guardado";
+                btn.classList.replace('bg-red-600', 'bg-slate-600');
+                btn.classList.replace('hover:bg-red-700', 'bg-slate-600');
+                btn.classList.remove('shadow-red-500/50');
+            } catch (e) {
+                console.error("Error al conectar con Firebase: ", e);
+                alert("Hubo un error al guardar. Revisa la consola para más detalles.");
+                btn.innerText = "🚨 Intentar de nuevo";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
