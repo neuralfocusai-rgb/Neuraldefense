@@ -10,7 +10,6 @@
 
     <div class="max-w-md mx-auto p-6 mt-6 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
         
-        <!-- Encabezado con Selector de Idiomas Global -->
         <div class="flex justify-between items-start mb-2">
             <div>
                 <h1 id="txt-titulo" class="text-2xl font-bold text-emerald-400">🛡️ Neural Defense</h1>
@@ -31,7 +30,6 @@
             <textarea id="textoSospechoso" rows="4" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none text-white" placeholder="Ej: Tu cuenta ha sido bloqueada. Entra a este link URGENTE..."></textarea>
         </div>
 
-        <!-- Switch de Privacidad Corporativa (Data Masking) -->
         <div class="flex items-center mb-6 bg-slate-900 p-3 rounded-lg border border-slate-700">
             <input type="checkbox" id="togglePrivacidad" checked class="w-4 h-4 text-emerald-600 bg-slate-700 border-slate-600 rounded focus:ring-emerald-500">
             <label for="togglePrivacidad" class="ml-3 text-sm text-slate-300 flex-1">
@@ -46,7 +44,6 @@
         <div id="resultado" class="mt-6 hidden">
             <h3 id="txt-diagnostico" class="text-lg font-bold mb-2">Diagnóstico:</h3>
             
-            <!-- Muestra el texto procesado si se aplicó enmascaramiento -->
             <div id="textoProcesadoContainer" class="hidden mb-4 p-3 bg-slate-900 border border-slate-700 rounded-lg">
                 <p id="txt-proc-seguro" class="text-xs text-slate-400 mb-1">Texto procesado (Seguro):</p>
                 <p id="textoProcesadoVisual" class="text-sm text-slate-300 italic"></p>
@@ -95,7 +92,7 @@
 
         let reporteActual = { texto: "", riesgo: "", banderas: [] };
 
-        // DICCIONARIO DE TRADUCCIONES (Español, Inglés, Turco)
+        // DICCIONARIO INTERNACIONAL COMPLETO (Soporte total para la UI y el Radar)
         const diccionario = {
             es: {
                 titulo: "🛡️ Neural Defense", subtitulo: "Decodificador de Engaño Cognitivo",
@@ -107,8 +104,21 @@
                 rBajo: "✅ Riesgo Bajo", rAlto: "🚨 RIESGO ALTO: Patrón sospechoso", rCritico: "🔥 RIESGO CRÍTICO: Dominio o Patrón detectado",
                 btnReportar: "🚨 Reportar a la Comunidad", enviando: "Enviando...", guardado: "Reporte Guardado", errorFb: "Error al conectar con Firebase.",
                 intentar: "🚨 Intentar de nuevo", sinAmenazas: "No hay amenazas recientes. ¡El sector está seguro!", errorConexion: "Error de conexión al cargar el radar.",
-                b1: "Se protegió información confidencial localmente", b2: "🚨 DOMINIO SOSPECHOSO: URL externa no verificada", b3: "Contiene enlace (Fuente verificada)",
-                b4: "Lenguaje de urgencia artificial", b5: "Solicitud de información financiera/sensible", b6: "Promesa de premio inusual (Gancho)", tagRiesgo: "Riesgo"
+                tagRiesgo: "Riesgo",
+                // Mapeo estricto de banderas del motor
+                "Se protegió información confidencial localmente": "Se protegió información confidencial localmente",
+                "🚨 DOMINIO SOSPECHOSO: URL externa no verificada": "🚨 DOMINIO SOSPECHOSO: URL externa no verificada",
+                "Contiene enlace (Fuente verificada)": "Contiene enlace (Fuente verificada)",
+                "Lenguaje de urgencia artificial": "Lenguaje de urgencia artificial",
+                "Solicitud de información financiera/sensible": "Solicitud de información financiera/sensible",
+                "Promesa de premio inusual (Gancho)": "Promesa de premio inusual (Gancho)",
+                // Compatibilidad con banderas de reportes antiguos en la DB
+                "Contiene un enlace externo (Alta sospecha)": "Contiene un enlace externo (Alta sospecha)",
+                "Sentido de urgencia falsa detectado.": "Sentido de urgencia falsa detectado.",
+                "Promesa de premio inusual.": "Promesa de premio inusual.",
+                "Pide datos financieros o credenciales.": "Solicitud de información financiera/sensible",
+                "Contiene un enlace. Cuidado con el Phishing.": "Contiene un enlace externo (Alta sospecha)",
+                "Crítico": "Crítico", "Alto": "Alto", "Bajo": "Bajo"
             },
             en: {
                 titulo: "🛡️ Neural Defense", subtitulo: "Cognitive Deception Decoder",
@@ -120,8 +130,19 @@
                 rBajo: "✅ Low Risk", rAlto: "🚨 HIGH RISK: Suspicious Pattern", rCritico: "🔥 CRITICAL RISK: Detected Pattern or Domain",
                 btnReportar: "🚨 Report to Community", enviando: "Sending...", guardado: "Report Saved", errorFb: "Error connecting to Firebase.",
                 intentar: "🚨 Try Again", sinAmenazas: "No recent threats. The area is secure!", errorConexion: "Connection error while loading the radar.",
-                b1: "Confidential data protected locally", b2: "🚨 SUSPICIOUS DOMAIN: Unverified external URL", b3: "Contains link (Verified Source)",
-                b4: "Artificial urgency language", b5: "Financial/Sensitive data request", b6: "Unusual prize promise (Hook)", tagRiesgo: "Risk"
+                tagRiesgo: "Risk",
+                "Se protegió información confidencial localmente": "Confidential data protected locally",
+                "🚨 DOMINIO SOSPECHOSO: URL externa no verificada": "🚨 SUSPICIOUS DOMAIN: Unverified external URL",
+                "Contiene enlace (Fuente verificada)": "Contains link (Verified Source)",
+                "Lenguaje de urgencia artificial": "Artificial urgency language",
+                "Solicitud de información financiera/sensible": "Financial/Sensitive data request",
+                "Promesa de premio inusual (Gancho)": "Unusual prize promise (Hook)",
+                "Contiene un enlace externo (Alta sospecha)": "Contains external link (High suspicion)",
+                "Sentido de urgencia falsa detectado.": "False sense of urgency detected.",
+                "Promesa de premio inusual.": "Unusual prize promise.",
+                "Pide datos financieros o credenciales.": "Financial data or credentials requested.",
+                "Contiene un enlace. Cuidado con el Phishing.": "Contains a link. Watch out for Phishing.",
+                "Crítico": "Critical", "Alto": "High", "Bajo": "Low"
             },
             tr: {
                 titulo: "🛡️ Neural Defense", subtitulo: "Bilişsel Aldatma Çözücü",
@@ -133,8 +154,19 @@
                 rBajo: "✅ Düşük Risk", rAlto: "🚨 YÜKSEK RİSK: Şüpheli Kalıp", rCritico: "🔥 KRİTİK RİSK: Şüpheli Alan Adı veya Kalıp",
                 btnReportar: "🚨 Topluluğa Bildir", enviando: "Gönderiliyor...", guardado: "Rapor Kaydedildi", errorFb: "Firebase bağlantı hatası.",
                 intentar: "🚨 Tekrar Dene", sinAmenazas: "Yakın zamanda tehdit yok. Sektör güvende!", errorConexion: "Radar yüklenirken bağlantı hatası oluştu.",
-                b1: "Gizli veriler yerel olarak korundu", b2: "🚨 ŞÜPHELİ ALAN ADI: Doğrulanmamış harici URL", b3: "Bağlantı içeriyor (Doğrulanmış Kaynak)",
-                b4: "Yapay aciliyet dili", b5: "Finansal/Hassas veri talebi", b6: "Olağandışı ödül vaadi (Tuzak)", tagRiesgo: "Risk"
+                tagRiesgo: "Risk",
+                "Se protegió información confidencial localmente": "Gizli veriler yerel olarak korundu",
+                "🚨 DOMINIO SOSPECHOSO: URL externa no verificada": "🚨 ŞÜPHELİ ALAN ADI: Doğrulanmamış harici URL",
+                "Contiene enlace (Fuente verificada)": "Bağlantı içeriyor (Doğrulanmış Kaynak)",
+                "Lenguaje de urgencia artificial": "Yapay aciliyet dili",
+                "Solicitud de información financiera/sensible": "Finansal/Hassas veri talebi",
+                "Promesa de premio inusual (Gancho)": "Olağandışı ödül vaadi (Tuzak)",
+                "Contiene un enlace externo (Alta sospecha)": "Harici bağlantı içeriyor (Yüksek şüphe)",
+                "Sentido de urgencia falsa detectado.": "Yapay aciliyet algısı tespit edildi.",
+                "Promesa de premio inusual.": "Olağandışı ödül vaadi.",
+                "Pide datos financieros o credenciales.": "Finansal veri veya kimlik bilgisi talebi.",
+                "Contiene un enlace. Cuidado con el Phishing.": "Bağlantı içeriyor. Oltalama saldırısına dikkat.",
+                "Crítico": "Kritik", "Alto": "Yüksek", "Bajo": "Düşük"
             }
         };
 
@@ -143,7 +175,7 @@
             const d = diccionario[lang];
             
             document.getElementById('txt-titulo').innerText = d.titulo;
-            document.getElementById('txt-subtitulo').innerText = d.subitulo || d.subtitulo;
+            document.getElementById('txt-subtitulo').innerText = d.subtitulo;
             document.getElementById('txt-label-input').innerText = d.labelInput;
             document.getElementById('textoSospechoso').placeholder = d.placeholder;
             document.getElementById('txt-mask-bold').innerText = d.maskBold;
@@ -168,7 +200,6 @@
             return textoSeguro;
         }
 
-        // NUEVA FUNCIÓN B2B: Validación inteligente de dominios (Lista Blanca)
         function esDominioConfiable(texto) {
             const dominiosLegitimos = ["banco.com", "gob.ar", "paypal.com", "netflix.com", "turkiye.gov.tr"];
             const match = texto.match(/(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-z]{2,})/);
@@ -206,32 +237,30 @@
                 if (texto !== textoOriginal) {
                     containerProcesado.classList.remove('hidden');
                     textoVisual.innerText = texto;
-                    banderasRojas.push(d.b1);
+                    banderasRojas.push("Se protegió información confidencial localmente");
                 }
             }
 
-            // Validación avanzada de URLs (Opción A)
             if (texto.includes("http") || texto.includes("www.")) { 
                 if (!esDominioConfiable(texto)) {
-                    puntuacionRiesgo += 10; // Carga crítica instantánea
-                    banderasRojas.push(d.b2); 
+                    puntuacionRiesgo += 10; 
+                    banderasRojas.push("🚨 DOMINIO SOSPECHOSO: URL externa no verificada"); 
                 } else {
                     puntuacionRiesgo += 2;
-                    banderasRojas.push(d.b3);
+                    banderasRojas.push("Contiene enlace (Fuente verificada)");
                 }
             }
-            // Soporte multilingüe básico en el motor heurístico
             if (/(urgente|inmediato|bloqueada|vencer|urgent|immediately|blocked|acil|hemen|iptal)/.test(texto)) {
                 puntuacionRiesgo += 3;
-                banderasRojas.push(d.b4);
+                banderasRojas.push("Lenguaje de urgencia artificial");
             }
-            if (/(contraseña|clave|cvv|pin|tarjeta|banco|password|password|credit card|bank|şifre|kart|banka|hesap)/.test(texto)) {
+            if (/(contraseña|clave|cvv|pin|tarjeta|banco|password|credit card|bank|şifre|kart|banka|hesap)/.test(texto)) {
                 puntuacionRiesgo += 4;
-                banderasRojas.push(d.b5);
+                banderasRojas.push("Solicitud de información financiera/sensible");
             }
             if (/(ganaste|premio|sorteo|felicidades|won|prize|lottery|congrats|kazandınız|ödül|hediye)/.test(texto)) {
                 puntuacionRiesgo += 3;
-                banderasRojas.push(d.b6);
+                banderasRojas.push("Promesa de premio inusual (Gancho)");
             }
 
             resultadoDiv.classList.remove('hidden');
@@ -257,7 +286,7 @@
             reporteActual.banderas = banderasRojas;
 
             banderasRojas.forEach(b => {
-                const li = document.createElement('li'); li.innerText = b; detalles.appendChild(li);
+                const li = document.createElement('li'); li.innerText = d[b] || b; detalles.appendChild(li);
             });
         }
 
@@ -340,13 +369,18 @@
                 colorTextoRiesgo = 'text-orange-400';
             }
 
+            const riesgoTraducido = d[data.nivel_riesgo] || data.nivel_riesgo;
             const div = document.createElement('div');
             div.className = `bg-slate-700/50 p-3 rounded-lg border-l-4 ${colorBorde}`;
-            const etiquetasHTML = (data.detalles || []).map(det => `<span class="inline-block bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded mt-1 mr-1">${det}</span>`).join('');
+            
+            const etiquetasHTML = (data.detalles || []).map(det => {
+                const etiquetaTraducida = d[det] || det;
+                return `<span class="inline-block bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded mt-1 mr-1">${etiquetaTraducida}</span>`;
+            }).join('');
 
             div.innerHTML = `
                 <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs font-bold ${colorTextoRiesgo}">${d.tagRiesgo} ${data.nivel_riesgo}</span>
+                    <span class="text-xs font-bold ${colorTextoRiesgo}">${d.tagRiesgo} ${riesgoTraducido}</span>
                     <span class="text-xs text-slate-400">${horaFormateada}</span>
                 </div>
                 <p class="text-sm text-slate-200 italic line-clamp-2">"${data.mensaje_original}"</p>
