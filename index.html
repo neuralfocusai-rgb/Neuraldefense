@@ -50,11 +50,10 @@
     </div>
 
     <script type="module">
-        // 1. Importar librerías de Firebase (Agregamos getDocs, query, orderBy y limit para leer)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // 2. TUS CREDENCIALES
+        // TUS CREDENCIALES
         const firebaseConfig = {
             apiKey: "AIzaSyBEqDY_baLIgQK_DyAY9PhkYEMH-MZ20cY",
             authDomain: "neural-defense-facac.firebaseapp.com",
@@ -69,7 +68,6 @@
 
         let reporteActual = { texto: "", riesgo: "", banderas: [] };
 
-        // Función del motor heurístico
         window.analizarTexto = function() {
             const texto = document.getElementById('textoSospechoso').value.toLowerCase();
             const resultadoDiv = document.getElementById('resultado');
@@ -119,7 +117,6 @@
             });
         }
 
-        // Función para enviar datos a Firebase
         window.enviarReporte = async function() {
             const btn = document.getElementById('btnReportar');
             try {
@@ -138,7 +135,6 @@
                 btn.classList.replace('hover:bg-red-700', 'bg-slate-600');
                 btn.classList.remove('shadow-red-500/50');
                 
-                // Actualizar el radar instantáneamente para que el usuario vea su reporte
                 cargarRadar();
 
             } catch (e) {
@@ -149,15 +145,13 @@
             }
         }
 
-        // NUEVO: Función para leer de Firebase y mostrar el Radar
         window.cargarRadar = async function() {
             const feed = document.getElementById('feedReportes');
             try {
-                // Pedimos los últimos 5 reportes, ordenados de más nuevo a más viejo
                 const q = query(collection(db, "reportes_comunidad"), orderBy("fecha", "desc"), limit(5));
                 const querySnapshot = await getDocs(q);
                 
-                feed.innerHTML = ''; // Limpiar el mensaje de "Conectando..."
+                feed.innerHTML = ''; 
                 
                 if (querySnapshot.empty) {
                     feed.innerHTML = '<p class="text-slate-400 text-sm text-center py-4">No hay amenazas recientes. ¡El sector está seguro!</p>';
@@ -166,16 +160,12 @@
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    
-                    // Formatear la hora
                     const fechaObj = new Date(data.fecha);
                     const horaFormateada = fechaObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute:'2-digit' });
                     
-                    // Crear la tarjeta visual
                     const div = document.createElement('div');
                     div.className = "bg-slate-700/50 p-3 rounded-lg border-l-4 " + (data.nivel_riesgo === 'Alto' ? 'border-red-500' : 'border-yellow-500');
                     
-                    // Armar las etiquetas rojas
                     const etiquetasHTML = data.detalles.map(d => `<span class="inline-block bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded mt-1 mr-1">${d}</span>`).join('');
 
                     div.innerHTML = `
@@ -192,7 +182,6 @@
                 });
             } catch (error) {
                 console.error("Error al cargar el radar: ", error);
-                // Si falla por los índices de Firebase en la primera carga, mostramos un fallback ordenado localmente
                 if (error.message.includes("index")) {
                      obtenerSinIndice(feed);
                 } else {
@@ -201,15 +190,13 @@
             }
         }
 
-        // Fallback por si Firebase pide crear un índice de búsqueda (muy común la primera vez)
         async function obtenerSinIndice(feed) {
              const querySnapshot = await getDocs(collection(db, "reportes_comunidad"));
              let reportes = [];
              querySnapshot.forEach((doc) => reportes.push(doc.data()));
              
-             // Ordenar localmente por fecha
              reportes.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-             reportes = reportes.slice(0, 5); // Tomar solo los 5 más nuevos
+             reportes = reportes.slice(0, 5);
              
              feed.innerHTML = '';
              reportes.forEach((data) => {
@@ -231,9 +218,7 @@
              });
         }
 
-        // Arrancar el radar automáticamente cuando carga la página
         window.onload = cargarRadar;
-
     </script>
 </body>
 </html>
