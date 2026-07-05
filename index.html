@@ -3,19 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neural Defense | Community Shield</title>
+    <title>Neural Defense | Enterprise Shield</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen font-sans pb-10">
 
     <div class="max-w-md mx-auto p-6 mt-6 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
         
-        <h1 class="text-2xl font-bold text-emerald-400 mb-2">🛡️ Neural Defense</h1>
+        <div class="flex justify-between items-start mb-2">
+            <h1 class="text-2xl font-bold text-emerald-400">🛡️ Neural Defense</h1>
+            <span class="bg-blue-900 text-blue-300 text-[10px] font-bold px-2 py-1 rounded border border-blue-700">B2B EDITION</span>
+        </div>
         <p class="text-sm text-slate-400 mb-6">Decodificador de Engaño Cognitivo</p>
 
         <div class="mb-4">
             <label class="block text-sm font-medium mb-2">Pegá el mensaje sospechoso aquí:</label>
             <textarea id="textoSospechoso" rows="4" class="w-full p-3 bg-slate-700 border border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none text-white" placeholder="Ej: Tu cuenta ha sido bloqueada. Entra a este link URGENTE..."></textarea>
+        </div>
+
+        <!-- NUEVO: Switch de Privacidad Corporativa -->
+        <div class="flex items-center mb-6 bg-slate-900 p-3 rounded-lg border border-slate-700">
+            <input type="checkbox" id="togglePrivacidad" checked class="w-4 h-4 text-emerald-600 bg-slate-700 border-slate-600 rounded focus:ring-emerald-500">
+            <label for="togglePrivacidad" class="ml-3 text-sm text-slate-300 flex-1">
+                <strong class="text-emerald-400">Data Masking Activo:</strong> Ocultar correos y tarjetas de crédito automáticamente.
+            </label>
         </div>
 
         <button onclick="analizarTexto()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
@@ -24,10 +35,17 @@
 
         <div id="resultado" class="mt-6 hidden">
             <h3 class="text-lg font-bold mb-2">Diagnóstico:</h3>
-            <div id="nivelAlerta" class="p-3 rounded-lg font-semibold mb-2"></div>
+            
+            <!-- NUEVO: Muestra el texto procesado si se aplicó enmascaramiento -->
+            <div id="textoProcesadoContainer" class="hidden mb-4 p-3 bg-slate-900 border border-slate-700 rounded-lg">
+                <p class="text-xs text-slate-400 mb-1">Texto procesado (Seguro):</p>
+                <p id="textoProcesadoVisual" class="text-sm text-slate-300 italic"></p>
+            </div>
+
+            <div id="nivelAlerta" class="p-3 rounded-lg font-semibold mb-2 transition-all"></div>
             <ul id="detallesAlerta" class="list-disc pl-5 text-sm space-y-1 text-slate-300 mb-4"></ul>
             
-            <button id="btnReportar" onclick="enviarReporte()" class="hidden w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 shadow-lg shadow-red-500/50">
+            <button id="btnReportar" onclick="enviarReporte()" class="hidden w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200 shadow-lg shadow-rose-500/50">
                 🚨 Reportar a la Comunidad
             </button>
         </div>
@@ -53,7 +71,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // TUS CREDENCIALES
         const firebaseConfig = {
             apiKey: "AIzaSyBEqDY_baLIgQK_DyAY9PhkYEMH-MZ20cY",
             authDomain: "neural-defense-facac.firebaseapp.com",
@@ -68,48 +85,82 @@
 
         let reporteActual = { texto: "", riesgo: "", banderas: [] };
 
+        // NUEVA FUNCIÓN: Enmascaramiento de datos corporativos
+        function aplicarMascaraDeDatos(texto) {
+            let textoSeguro = texto;
+            // Ocultar tarjetas de crédito (busca de 13 a 16 dígitos juntos o con espacios)
+            textoSeguro = textoSeguro.replace(/\b(?:\d[ -]*?){13,16}\b/g, "[TARJETA PROTEGIDA]");
+            // Ocultar correos electrónicos
+            textoSeguro = textoSeguro.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, "[EMAIL PROTEGIDO]");
+            return textoSeguro;
+        }
+
         window.analizarTexto = function() {
-            const texto = document.getElementById('textoSospechoso').value.toLowerCase();
+            let texto = document.getElementById('textoSospechoso').value.toLowerCase();
             const resultadoDiv = document.getElementById('resultado');
             const nivelAlerta = document.getElementById('nivelAlerta');
             const detalles = document.getElementById('detallesAlerta');
             const btnReportar = document.getElementById('btnReportar');
+            const togglePrivacidad = document.getElementById('togglePrivacidad').checked;
+            const containerProcesado = document.getElementById('textoProcesadoContainer');
+            const textoVisual = document.getElementById('textoProcesadoVisual');
             
             detalles.innerHTML = '';
             btnReportar.classList.add('hidden');
+            containerProcesado.classList.add('hidden');
             let puntuacionRiesgo = 0;
             let banderasRojas = [];
 
             if (texto.trim() === '') return alert("Ingresá un texto para analizar.");
 
-            const patrones = {
-                urgencia: ["urgente", "inmediato", "bloqueada", "suspendida", "24 horas", "vencerá"],
-                gancho: ["ganaste", "premio", "sorteo", "felicidades"],
-                accion: ["haz clic", "ingresa aquí", "verifica tu identidad", "actualiza tus datos"],
-                financiero: ["banco", "tarjeta", "transferencia", "cvv", "contraseña"]
-            };
+            // Aplicar máscara si está activada
+            if (togglePrivacidad) {
+                const textoOriginal = texto;
+                texto = aplicarMascaraDeDatos(texto);
+                if (texto !== textoOriginal) {
+                    containerProcesado.classList.remove('hidden');
+                    textoVisual.innerText = texto;
+                    banderasRojas.push("Se protegió información confidencial localmente");
+                }
+            }
 
-            patrones.urgencia.forEach(p => { if (texto.includes(p)) { puntuacionRiesgo += 2; banderasRojas.push("Urgencia falsa"); } });
-            patrones.gancho.forEach(p => { if (texto.includes(p)) { puntuacionRiesgo += 3; banderasRojas.push("Premio inusual"); } });
-            patrones.accion.forEach(p => { if (texto.includes(p)) { puntuacionRiesgo += 2; banderasRojas.push("Exige interacción"); } });
-            patrones.financiero.forEach(p => { if (texto.includes(p)) { puntuacionRiesgo += 2; banderasRojas.push("Pide datos sensibles"); } });
-            if (texto.includes("http") || texto.includes("www.")) { puntuacionRiesgo += 3; banderasRojas.push("Contiene enlace (Phishing)"); }
+            if (texto.includes("http") || texto.includes("www.")) { 
+                puntuacionRiesgo += 5; 
+                banderasRojas.push("Contiene un enlace externo (Alta sospecha)"); 
+            }
+            if (/(urgente|inmediato|bloqueada|ahora|cuenta suspendida|vencerá)/.test(texto)) {
+                puntuacionRiesgo += 3;
+                banderasRojas.push("Lenguaje de urgencia artificial");
+            }
+            if (/(contraseña|clave|cvv|pin|tarjeta|token|banco|transferencia)/.test(texto)) {
+                puntuacionRiesgo += 4;
+                banderasRojas.push("Solicitud de información financiera/sensible");
+            }
+            if (/(ganaste|premio|sorteo|felicidades|regalo)/.test(texto)) {
+                puntuacionRiesgo += 3;
+                banderasRojas.push("Promesa de premio inusual (Gancho)");
+            }
 
             resultadoDiv.classList.remove('hidden');
             
-            if (puntuacionRiesgo === 0) {
+            if (puntuacionRiesgo >= 8) {
+                nivelAlerta.className = "p-3 rounded-lg font-bold mb-2 bg-rose-900 text-rose-300 border border-rose-700 shadow-inner shadow-rose-900";
+                nivelAlerta.innerText = "🔥 RIESGO CRÍTICO: Estafa inminente";
+                reporteActual.riesgo = "Crítico";
+                btnReportar.classList.remove('hidden'); 
+            } else if (puntuacionRiesgo >= 4) {
+                nivelAlerta.className = "p-3 rounded-lg font-bold mb-2 bg-orange-900 text-orange-300 border border-orange-700";
+                nivelAlerta.innerText = "🚨 RIESGO ALTO: Patrón sospechoso";
+                reporteActual.riesgo = "Alto";
+                btnReportar.classList.remove('hidden'); 
+            } else {
                 nivelAlerta.className = "p-3 rounded-lg font-semibold mb-2 bg-emerald-900 text-emerald-300 border border-emerald-700";
                 nivelAlerta.innerText = "✅ Riesgo Bajo";
                 reporteActual.riesgo = "Bajo";
-            } else {
-                nivelAlerta.className = "p-3 rounded-lg font-semibold mb-2 bg-red-900 text-red-300 border border-red-700";
-                nivelAlerta.innerText = "🚨 ALTO RIESGO: Patrón de estafa";
-                reporteActual.riesgo = "Alto";
-                btnReportar.classList.remove('hidden'); 
             }
 
             banderasRojas = [...new Set(banderasRojas)];
-            reporteActual.texto = texto;
+            reporteActual.texto = texto; // Guarda el texto enmascarado para enviar a la base de datos
             reporteActual.banderas = banderasRojas;
 
             banderasRojas.forEach(b => {
@@ -131,9 +182,9 @@
                 });
 
                 btn.innerText = "Reporte Guardado";
-                btn.classList.replace('bg-red-600', 'bg-slate-600');
-                btn.classList.replace('hover:bg-red-700', 'bg-slate-600');
-                btn.classList.remove('shadow-red-500/50');
+                btn.classList.replace('bg-rose-600', 'bg-slate-600');
+                btn.classList.replace('hover:bg-rose-700', 'bg-slate-600');
+                btn.classList.remove('shadow-rose-500/50');
                 
                 cargarRadar();
 
@@ -159,26 +210,7 @@
                 }
 
                 querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const fechaObj = new Date(data.fecha);
-                    const horaFormateada = fechaObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute:'2-digit' });
-                    
-                    const div = document.createElement('div');
-                    div.className = "bg-slate-700/50 p-3 rounded-lg border-l-4 " + (data.nivel_riesgo === 'Alto' ? 'border-red-500' : 'border-yellow-500');
-                    
-                    const etiquetasHTML = data.detalles.map(d => `<span class="inline-block bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded mt-1 mr-1">${d}</span>`).join('');
-
-                    div.innerHTML = `
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-xs font-bold ${data.nivel_riesgo === 'Alto' ? 'text-red-400' : 'text-yellow-400'}">Riesgo ${data.nivel_riesgo}</span>
-                            <span class="text-xs text-slate-400">${horaFormateada}</span>
-                        </div>
-                        <p class="text-sm text-slate-200 italic line-clamp-2">"${data.mensaje_original}"</p>
-                        <div class="mt-2">
-                            ${etiquetasHTML}
-                        </div>
-                    `;
-                    feed.appendChild(div);
+                    renderizarTarjetaRadar(doc.data(), feed);
                 });
             } catch (error) {
                 console.error("Error al cargar el radar: ", error);
@@ -200,22 +232,41 @@
              
              feed.innerHTML = '';
              reportes.forEach((data) => {
-                 const horaFormateada = new Date(data.fecha).toLocaleTimeString('es-AR', { hour: '2-digit', minute:'2-digit' });
-                 const div = document.createElement('div');
-                 div.className = "bg-slate-700/50 p-3 rounded-lg border-l-4 " + (data.nivel_riesgo === 'Alto' ? 'border-red-500' : 'border-yellow-500');
-                 const etiquetasHTML = data.detalles.map(d => `<span class="inline-block bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded mt-1 mr-1">${d}</span>`).join('');
-                 div.innerHTML = `
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-xs font-bold ${data.nivel_riesgo === 'Alto' ? 'text-red-400' : 'text-yellow-400'}">Riesgo ${data.nivel_riesgo}</span>
-                            <span class="text-xs text-slate-400">${horaFormateada}</span>
-                        </div>
-                        <p class="text-sm text-slate-200 italic line-clamp-2">"${data.mensaje_original}"</p>
-                        <div class="mt-2">
-                            ${etiquetasHTML}
-                        </div>
-                    `;
-                 feed.appendChild(div);
+                 renderizarTarjetaRadar(data, feed);
              });
+        }
+
+        function renderizarTarjetaRadar(data, contenedor) {
+            const fechaObj = new Date(data.fecha);
+            const horaFormateada = fechaObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute:'2-digit' });
+            
+            let colorBorde = 'border-emerald-500';
+            let colorTextoRiesgo = 'text-emerald-400';
+            
+            if (data.nivel_riesgo === 'Crítico') {
+                colorBorde = 'border-rose-500';
+                colorTextoRiesgo = 'text-rose-400';
+            } else if (data.nivel_riesgo === 'Alto') {
+                colorBorde = 'border-orange-500';
+                colorTextoRiesgo = 'text-orange-400';
+            }
+
+            const div = document.createElement('div');
+            div.className = `bg-slate-700/50 p-3 rounded-lg border-l-4 ${colorBorde}`;
+            
+            const etiquetasHTML = (data.detalles || []).map(d => `<span class="inline-block bg-slate-800 text-slate-300 text-[10px] px-2 py-1 rounded mt-1 mr-1">${d}</span>`).join('');
+
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold ${colorTextoRiesgo}">Riesgo ${data.nivel_riesgo}</span>
+                    <span class="text-xs text-slate-400">${horaFormateada}</span>
+                </div>
+                <p class="text-sm text-slate-200 italic line-clamp-2">"${data.mensaje_original}"</p>
+                <div class="mt-2">
+                    ${etiquetasHTML}
+                </div>
+            `;
+            contenedor.appendChild(div);
         }
 
         window.onload = cargarRadar;
